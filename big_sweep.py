@@ -348,7 +348,7 @@ def sweep(ensemble_init_func, cfg):
 
     chunk_order = np.random.permutation(n_chunks)
 
-    if cfg.n_repetitions is not None:
+    if hasattr(cfg, 'n_repetitions') and cfg.n_repetitions is not None:
         chunk_order = np.tile(chunk_order, cfg.n_repetitions)
 
     for i, chunk_idx in enumerate(chunk_order):
@@ -356,7 +356,7 @@ def sweep(ensemble_init_func, cfg):
 
         chunk_loc = os.path.join(cfg.dataset_folder, f"{chunk_idx}.pt")
         chunk = torch.load(chunk_loc).to(device="cpu", dtype=torch.float32)
-        if cfg.center_activations:
+        if hasattr(cfg, 'center_activations') and cfg.center_activations:
             if i == 0:
                 print("Centring activations")
                 means = chunk.mean(dim=0)

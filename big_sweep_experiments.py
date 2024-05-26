@@ -10,7 +10,7 @@ import torchopt
 import tqdm
 
 from config import EnsembleArgs
-from autoencoders.direct_coef_search import DirectCoefOptimizer
+#from autoencoders.direct_coef_search import DirectCoefOptimizer
 from autoencoders.ensemble import FunctionalEnsemble
 from autoencoders.mlp_tests import FunctionalPositiveTiedSAE
 from autoencoders.residual_denoising_autoencoder import (
