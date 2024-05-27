@@ -44,13 +44,16 @@ from neuron_explainer.explanations.explainer import \
 from neuron_explainer.explanations.prompt_builder import PromptFormat
 from neuron_explainer.explanations.scoring import (
     aggregate_scored_sequence_simulations, simulate_and_score)
-from neuron_explainer.explanations.simulator import ExplanationNeuronSimulator
+#from neuron_explainer.explanations.simulator import ExplanationNeuronSimulator
+from neuron_explainer.explanations.simulator import LogprobFreeExplanationTokenSimulator
 from neuron_explainer.fast_dataclasses import loads
 
 EXPLAINER_MODEL_NAME = "gpt-4"  # "gpt-3.5-turbo"
-SIMULATOR_MODEL_NAME = "text-davinci-003"
+#SIMULATOR_MODEL_NAME = "text-davinci-003"
+SIMULATOR_MODEL_NAME = "gpt-3.5-turbo-instruct"
 
-OPENAI_MAX_FRAGMENTS = 50000
+#OPENAI_MAX_FRAGMENTS = 50000
+OPENAI_MAX_FRAGMENTS = 5000
 OPENAI_FRAGMENT_LEN = 64
 OPENAI_EXAMPLES_PER_SPLIT = 5
 N_SPLITS = 4
@@ -58,7 +61,8 @@ TOTAL_EXAMPLES = OPENAI_EXAMPLES_PER_SPLIT * N_SPLITS
 REPLACEMENT_CHAR = "�"
 MAX_CONCURRENT: Any = None
 
-BASE_FOLDER = "/mnt/ssd-cluster/sweep_interp"
+#BASE_FOLDER = "/mnt/ssd-cluster/sweep_interp"
+BASE_FOLDER = "/home/ubuntu/sweep_interp"
 
 
 # Replaces the load_neuron function in neuron_explainer.activations.activations because couldn't get blobfile to work
@@ -96,6 +100,8 @@ def make_feature_activation_dataset(
     """
     model.to(device)
     model.eval()
+    print(learned_dict)
+    learned_dict = learned_dict[0][0]
     learned_dict.to_device(device)
 
     use_baukit = check_use_baukit(model.cfg.model_name)
@@ -122,11 +128,13 @@ def make_feature_activation_dataset(
 
     n_thrown = 0
     n_added = 0
-    batch_size = min(20, n_fragments)
+    #batch_size = min(20, n_fragments)
+    batch_size = min(10, n_fragments)
 
     fragment_token_ids_list = []
     fragment_token_strs_list = []
 
+    activation_maxes_table = np.zeros((n_fragments, feat_dim), dtype=np.float16)
     activation_maxes_table = np.zeros((n_fragments, feat_dim), dtype=np.float16)
     activation_data_table = np.zeros((n_fragments, feat_dim * OPENAI_FRAGMENT_LEN), dtype=np.float16)
     with torch.no_grad():
@@ -223,7 +231,9 @@ def get_df(
     force_refresh: bool = False,
 ) -> pd.DataFrame:
     # Load feature dict
-    feature_dict.to_device(device)
+    print(feature_dict)
+    feature_dict[0][0].to_device(device)
+    #feature_dict.to_device(device)
 
     df_loc = os.path.join(save_loc, f"activation_df.hdf")
 
@@ -348,7 +358,8 @@ async def interpret(base_df: pd.DataFrame, save_folder: str, n_feats_to_explain:
         # Simulate and score the explanation.
         format = PromptFormat.HARMONY_V4 if SIMULATOR_MODEL_NAME == "gpt-3.5-turbo" else PromptFormat.INSTRUCTION_FOLLOWING
         simulator = UncalibratedNeuronSimulator(
-            ExplanationNeuronSimulator(
+            #ExplanationNeuronSimulator(
+            LogprobFreeExplanationTokenSimulator(
                 SIMULATOR_MODEL_NAME,
                 explanation,
                 max_concurrent=MAX_CONCURRENT,
@@ -809,6 +820,7 @@ if __name__ == "__main__":
         if os.path.isdir(cfg.load_interpret_autoencoder):
             run_folder(cfg)
         else:
+            print("{cfg.load_interpret_autoencoder}")
             learned_dict = torch.load(cfg.load_interpret_autoencoder, map_location=cfg.device)
             save_folder = f"/mnt/ssd-cluster/auto_interp_results/l{cfg.layer}_{cfg.layer_loc}"
             cfg.save_loc = os.path.join(save_folder, cfg.load_interpret_autoencoder)

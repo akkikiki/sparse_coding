@@ -343,6 +343,7 @@ def sweep(ensemble_init_func, cfg):
     cfg.buffer_hyperparams = buffer_hyperparams
 
     print("Ensembles initialised.")
+    print(dict(vars(cfg)))
 
     n_chunks = len(os.listdir(cfg.dataset_folder))
 
@@ -381,6 +382,8 @@ def sweep(ensemble_init_func, cfg):
             torch.save(learned_dicts, os.path.join(cfg.iter_folder, "learned_dicts.pt"))
             # save the config as a yaml file
             with open(os.path.join(cfg.iter_folder, "config.yaml"), "w") as f:
-                yaml.dump(dict(cfg), f)
+                temp = vars(cfg)
+                temp["dtype"] = str(temp["dtype"])
+                yaml.dump(vars(cfg), f)
 
         print("\n")
